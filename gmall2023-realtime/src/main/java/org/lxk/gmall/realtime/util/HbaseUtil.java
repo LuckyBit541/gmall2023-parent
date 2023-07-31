@@ -1,11 +1,16 @@
 package org.lxk.gmall.realtime.util;
 
+import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.flink.api.java.tuple.Tuple2;
+import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.lxk.gmall.realtime.bean.TableProcess;
+import org.lxk.gmall.realtime.function.HbaseSink;
 
 import java.io.IOException;
 
@@ -68,5 +73,42 @@ public class HbaseUtil {
             throw new RuntimeException(e);
         }
 
+    }
+
+
+    public static SinkFunction<Tuple2<JSONObject, TableProcess>> getHbaseSink() {
+        return new HbaseSink();
+    }
+
+
+    public static void putOneRow(Connection connection, String nameSpace, String sinkTable, String sinkFamily, String[] sinkColumns, String rowKey, JSONObject data) {
+        TableName tableName = TableName.valueOf(nameSpace,sinkTable);
+
+        try (Table table = connection.getTable(tableName)){
+            Put put = new Put(Bytes.toBytes(rowKey));
+            for (String sinkColumn : sinkColumns) {
+                String cell = data.getString(sinkColumn);
+                if (cell != null) {
+                    put.addColumn(Bytes.toBytes(sinkFamily),
+                            Bytes.toBytes(sinkColumn),
+                            Bytes.toBytes(cell));
+                }
+            }
+            table.put(put);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void deleteOneRow(Connection connection, String nameSpace, String sinkTable, String rowKey) {
+        TableName tableName = TableName.valueOf(nameSpace, sinkTable);
+        try (Table table=connection.getTable(tableName)){
+            Delete delete = new Delete(Bytes.toBytes(rowKey));
+            table.delete(delete);
+
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 }

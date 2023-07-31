@@ -8,5 +8,7 @@ public class GmallConstant {
     public static final int MYSQL_PORT = 3306;
     public static final String CONFIG_DATABASE = "gmall2023_config";
     public static final String MYSQL_USERNAME = "root";
-    public static final String MYSQ_PASSWD = "root";
+    public static final String MYSQ_PASSWD = "aaaaaa";
+    public static final String JDBC_DRIVER = "com.mysql.cj.jdbc.Driver";
+    public static final String JDB_URL = "jdbc:mysql://hadoop162:3306?useSSL=false";
 }
