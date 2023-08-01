@@ -41,19 +41,18 @@ public class DimApp extends BaseApp {
 
     @Override
     protected void handle(StreamExecutionEnvironment executionEnvironment, DataStreamSource<String> stream) {
-        //todo 1 对数据进行清洗
+        // 1 对数据进行清洗
         SingleOutputStreamOperator<String> etledStream = etl(stream);
-       etledStream.print();
-        //todo 2 cdc 读取配置文件
+        // 2 cdc 读取配置文件
         SingleOutputStreamOperator<TableProcess> tpStream = readTableProcess(executionEnvironment);
-        //todo 3 在 Hbase 中建表
+        // 3 在 Hbase 中建表
         tpStream = creatHbashTable(tpStream);
-        //todo 4 tpstream and dataStream connect
+        // 4 tpstream and dataStream connect
         SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> dimDataAndTpStream = connect(etledStream, tpStream);
         dimDataAndTpStream.print();
-        //todo 5 filter redundant columns of data
+        // 5 filter redundant columns of data
         SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> resultStream = deleteNotNeededColumns(dimDataAndTpStream);
-        //todo 6 dataStream write down into Hbase
+        // 6 dataStream write down into Hbase
         writeToHbase(resultStream);
 
 
@@ -103,9 +102,12 @@ public class DimApp extends BaseApp {
                         // 3.3 查询结果封装到map中
 
                         for (TableProcess tableProcess : tpList) {
-                            map.put(getKey(tableProcess.getSinkTable(), tableProcess.getSinkType()), tableProcess);
+                            map.put(getKey(tableProcess.getSourceTable(), tableProcess.getSourceType()), tableProcess);
                         }
+                        // 3.4 关闭连接
+                        JDBCUtil.closeConnection(jdbcConnection);
 
+                        System.out.println("map:::::"+map);
 
                     }
 
@@ -119,8 +121,9 @@ public class DimApp extends BaseApp {
                         TableProcess tp = broadcastState.get(key);
                         // tp为空,继续在tplist 预加载配置数据中查询
                         if (tp == null) {
+                            System.out.println("=========not in state");
                             tp = map.get(key);
-                            if (tp == null) {
+                            if (tp != null) {
 
                                 System.out.println("=====[map中的配置] ======");
                             }

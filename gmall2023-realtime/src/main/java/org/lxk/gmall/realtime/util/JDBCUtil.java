@@ -79,4 +79,13 @@ public class JDBCUtil {
         }
         return list;
     }
+
+    public static void closeConnection(Connection jdbcConnection) {
+
+        try {
+            jdbcConnection.close();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
