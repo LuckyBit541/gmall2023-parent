@@ -32,11 +32,11 @@ public void start(int port, int p, String ckAndJobName){
     StreamTableEnvironment streamTableEnvironment = StreamTableEnvironment.create(executionEnvironment);
 
     handle(executionEnvironment,streamTableEnvironment);
-    try {
+  /*  try {
         executionEnvironment.execute();
     } catch (Exception e) {
         throw new RuntimeException(e);
-    }
+    }*/
 }
 
     protected abstract void handle(StreamExecutionEnvironment env, StreamTableEnvironment tEnv );
@@ -48,11 +48,27 @@ public void readOdsDb(StreamTableEnvironment tEnv , String groupId){
                     "`type` string, " +
                     "`data` map<string, string>, " +
                     "`old` map<string, string>, " +
-                    "`ts` bigint " +
+                    "`ts` bigint ," +
+                    "pt as proctime()" +
                     ")"+ SQlUtil.getKafkaSourceSql(groupId, GmallConstant.ODS_DB)
 
     );
 
+
+}
+public void readBaseDic(StreamTableEnvironment tEnv , String groupId){
+    tEnv.executeSql("create table base_dic(" +
+            "dic_code string ," +
+            "info row<dic_name string> )with" +
+            "(" +
+            " 'connector' = 'hbase-2.2'," +
+            " 'table-name' = 'gmall:dim_base_dic'," +
+            "'lookup.partial-cache.expire-after-write' = '20 second'," +
+            " 'lookup.partial-cache.expire-after-access' = '20 second'," +
+            " 'lookup.partial-cache.max-rows' = '20', " +
+            " 'zookeeper.quorum' = 'hadoop162,hadoop163,hadoop164:2181' " +
+            ")"
+    );
 }
 
 }
