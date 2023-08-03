@@ -61,7 +61,7 @@ public class DwdInteractionCommentInfo extends BaseSqlApp {
                 "appraise_name string," +
                 "comment_txt string," +
                 "ts bigint " +
-                ")" + SQlUtil.getUpsertKafka(GmallConstant.TOPIC_DWD_INTERACTION_COMMENT_INFO));
+                ")" + SQlUtil.getKafkaSourceSql("DwdInteractionCommentInfo",GmallConstant.TOPIC_DWD_INTERACTION_COMMENT_INFO));
         // 5 write processed data down into Kafka
         result.executeInsert("dwd_interaction_comment_info");
 
