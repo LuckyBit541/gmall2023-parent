@@ -49,7 +49,9 @@ public void readOdsDb(StreamTableEnvironment tEnv , String groupId){
                     "`data` map<string, string>, " +
                     "`old` map<string, string>, " +
                     "`ts` bigint ," +
-                    "pt as proctime()" +
+                    "pt as proctime() ," +
+                    "et as to_timestamp_ltz(ts,0) ," +
+                    "watermark for et as et - interval '3' second" +
                     ")"+ SQlUtil.getKafkaSourceSql(groupId, GmallConstant.ODS_DB)
 
     );

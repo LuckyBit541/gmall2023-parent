@@ -7,16 +7,16 @@ import org.lxk.gmall.realtime.app.BaseSqlApp;
 import org.lxk.gmall.realtime.common.GmallConstant;
 import org.lxk.gmall.realtime.util.SQlUtil;
 
-public class DwdInteractionCommentInfo extends BaseSqlApp {
+public class Dwd02InteractionCommentInfo extends BaseSqlApp {
     public static void main(String[] args) {
-        new DwdInteractionCommentInfo().start(30002, 2, "DwdInteractionCommentInfo");
+        new Dwd02InteractionCommentInfo().start(30002, 2, "Dwd02InteractionCommentInfo");
     }
 
     @Override
     protected void handle(StreamExecutionEnvironment env, StreamTableEnvironment tEnv) {
 
         // 1 read data from ods_db topic of Kafka
-        readOdsDb(tEnv, "DwdInteractionCommentInfo");
+        readOdsDb(tEnv, "Dwd02InteractionCommentInfo");
         //tEnv.sqlQuery("select * from ods_db").execute().print();
         // 2 filter comment data out of raw data
 
@@ -38,7 +38,7 @@ public class DwdInteractionCommentInfo extends BaseSqlApp {
         // 3 load dic data from Hbase
 
 
-        readBaseDic(tEnv, "DwdInteractionCommentInfo");
+        readBaseDic(tEnv, "Dwd02InteractionCommentInfo");
 
         // 4 join comment data with dic data
         Table result = tEnv.sqlQuery(
@@ -54,14 +54,14 @@ public class DwdInteractionCommentInfo extends BaseSqlApp {
         tEnv.sqlQuery("select * from base_dic").execute().print();
         tEnv.createTemporaryView("result", result);
         tEnv.executeSql("create table dwd_interaction_comment_info(" +
-                "id string primary key not enforced," +
+                "id string ," +
                 "user_id string," +
                 "sku_id string," +
                 "appraise string," +
                 "appraise_name string," +
                 "comment_txt string," +
                 "ts bigint " +
-                ")" + SQlUtil.getKafkaSourceSql("DwdInteractionCommentInfo",GmallConstant.TOPIC_DWD_INTERACTION_COMMENT_INFO));
+                ")" + SQlUtil.getKafkaSourceSql("Dwd02InteractionCommentInfo",GmallConstant.TOPIC_DWD_INTERACTION_COMMENT_INFO));
         // 5 write processed data down into Kafka
         result.executeInsert("dwd_interaction_comment_info");
 
