@@ -108,7 +108,7 @@ public class Dwd05TradeCanceledOrderDetail extends BaseSqlApp {
         );
 
         result.executeInsert("cancel_order_detail");
-       // tEnv.sqlQuery("select * from cancel_order_info").execute().print();
+        //tEnv.sqlQuery("select * from cancel_order_info").execute().print();
 
 
     }
