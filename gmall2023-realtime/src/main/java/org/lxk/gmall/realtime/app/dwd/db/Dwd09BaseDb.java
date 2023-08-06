@@ -27,6 +27,7 @@ import org.lxk.gmall.realtime.bean.TableProcess;
 import org.lxk.gmall.realtime.common.GmallConstant;
 import org.lxk.gmall.realtime.util.HbaseUtil;
 import org.lxk.gmall.realtime.util.JDBCUtil;
+import org.lxk.gmall.realtime.util.KafkaUtil;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -50,16 +51,18 @@ public class Dwd09BaseDb extends BaseApp {
         // 4 tpstream and dataStream connect
         SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> dimDataAndTpStream = connect(etledStream, tpStream);
         //dimDataAndTpStream.print();
+        //dimDataAndTpStream.print();
         // 5 filter redundant columns of data
         SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> resultStream = deleteNotNeededColumns(dimDataAndTpStream);
+        //resultStream.print();
         // 6 dataStream write down into Hbase
-        writeToHbase(resultStream);
+        writeToKafka(resultStream);
 
 
     }
 
-    private void writeToHbase(SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> resultStream) {
-        resultStream.addSink(HbaseUtil.getHbaseSink());
+    private void writeToKafka(SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> resultStream) {
+        resultStream.sinkTo(KafkaUtil.getKafkaSink());
     }
 
     private SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> deleteNotNeededColumns(SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> dataStream) {
@@ -83,9 +86,9 @@ public class Dwd09BaseDb extends BaseApp {
                 .connect(tpBroadcast)
                 .process(new BroadcastProcessFunction<String, TableProcess, Tuple2<JSONObject, TableProcess>>() {
                     private HashMap<String, TableProcess> map;
+
+
                     // 3 预加载配置数据
-
-
                     @Override
                     public void open(Configuration parameters) throws Exception {
                         map = new HashMap<>();
@@ -107,7 +110,7 @@ public class Dwd09BaseDb extends BaseApp {
                         // 3.4 关闭连接
                         JDBCUtil.closeConnection(jdbcConnection);
 
-                        System.out.println("map:::::"+map);
+                        //System.out.println("map:::::"+map);
 
                     }
 

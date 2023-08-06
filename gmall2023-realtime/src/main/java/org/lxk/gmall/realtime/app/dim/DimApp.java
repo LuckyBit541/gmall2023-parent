@@ -1,6 +1,7 @@
 package org.lxk.gmall.realtime.app.dim;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONAware;
 import com.alibaba.fastjson.JSONObject;
 import com.ververica.cdc.connectors.mysql.source.MySqlSource;
 import com.ververica.cdc.connectors.mysql.table.StartupOptions;
@@ -15,6 +16,7 @@ import org.apache.flink.api.common.state.MapStateDescriptor;
 import org.apache.flink.api.common.state.ReadOnlyBroadcastState;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.connector.kafka.sink.KafkaSink;
 import org.apache.flink.streaming.api.datastream.BroadcastStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
@@ -27,6 +29,7 @@ import org.lxk.gmall.realtime.bean.TableProcess;
 import org.lxk.gmall.realtime.common.GmallConstant;
 import org.lxk.gmall.realtime.util.HbaseUtil;
 import org.lxk.gmall.realtime.util.JDBCUtil;
+import org.lxk.gmall.realtime.util.KafkaUtil;
 
 import java.util.Arrays;
 import java.util.HashMap;
