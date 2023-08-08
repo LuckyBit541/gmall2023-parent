@@ -51,6 +51,7 @@ public class DwdTrafficLog extends BaseApp {
 
         Map<String, DataStream<JSONObject>> streamMap = splitStream(validatedStream);
         // 4 把流写入到 kafka 中
+        //streamMap.get("page").print();
         writeToKafka(streamMap);
 
     }
@@ -68,14 +69,15 @@ public class DwdTrafficLog extends BaseApp {
 
     private Map<String, DataStream<JSONObject>> splitStream(SingleOutputStreamOperator<JSONObject> stream) {
         OutputTag<JSONObject> dispalyTag = new OutputTag<JSONObject>("dispalys", TypeInformation.of(JSONObject.class));
-        OutputTag<JSONObject> actiontag = new OutputTag<JSONObject>("dispalys") {
+        OutputTag<JSONObject> actiontag = new OutputTag<JSONObject>("action") {
         };
-        OutputTag<JSONObject> errorTag = new OutputTag<JSONObject>("dispalys") {
+        OutputTag<JSONObject> errorTag = new OutputTag<JSONObject>("err") {
         };
-        OutputTag<JSONObject> pageTag = new OutputTag<JSONObject>("dispalys") {
+        OutputTag<JSONObject> pageTag = new OutputTag<JSONObject>("page") {
         };
 
         SingleOutputStreamOperator<JSONObject> splitSteam = stream.process(new ProcessFunction<JSONObject, JSONObject>() {
+            int i;
             @Override
             public void processElement(JSONObject value, ProcessFunction<JSONObject, JSONObject>.Context context, Collector<JSONObject> collector) throws Exception {
 
@@ -85,7 +87,7 @@ public class DwdTrafficLog extends BaseApp {
                 Long ts = value.getLong("ts");
                 // 1 start
                 if (start != null) {
-                    collector.collect(start);
+                    collector.collect(value);
                 }
                 // 2 dispalys
                 JSONArray displays = value.getJSONArray("displays");
@@ -116,14 +118,17 @@ public class DwdTrafficLog extends BaseApp {
                 JSONObject err = value.getJSONObject("err");
                 if (err != null) {
 
-                    context.output(errorTag, err);
+                    context.output(errorTag, value);
                     value.remove("err");
                 }
 
                 // 5 page
                 JSONObject page = value.getJSONObject("page");
+                //int i=1;
                 if (page != null) {
-                    context.output(pageTag, page);
+
+                    //System.out.println(value.toJSONString());
+                    context.output(pageTag, value);
                 }
 
 
