@@ -65,7 +65,7 @@ public class Dws_02_DwsTrafficVcChArIsNewPageViewWindow extends BaseApp {
                                 })
                                 .withIdleness(Duration.ofMinutes(1))
                 )
-                .keyBy(v->v.getVc()+"_"+v.getCh()+"_"+v.getAr()+"_"+v.getIsNew())
+                .keyBy(v -> v.getVc() + "_" + v.getCh() + "_" + v.getAr() + "_" + v.getIsNew())
                 .window(TumblingEventTimeWindows.of(Time.seconds(5)))
                 .reduce(new ReduceFunction<TrafficPageViewBean>() {
                     @Override
@@ -81,9 +81,9 @@ public class Dws_02_DwsTrafficVcChArIsNewPageViewWindow extends BaseApp {
                     public void process(String s, Context context, Iterable<TrafficPageViewBean> iterable, Collector<TrafficPageViewBean> collector) throws Exception {
                         TrafficPageViewBean result = iterable.iterator().next();
                         TimeWindow window = context.window();
-                        result.setStt(DateFormatUtils.format(window.getStart(),"yyyy-MM-dd HH:mm:ss"));
-                        result.setCur_date(DateFormatUtils.format(window.getStart(),"yyyy-MM-dd"));
-                        result.setEdt(DateFormatUtils.format(window.getEnd(),"yyyy-MM-dd HH:mm:ss"));
+                        result.setStt(DateFormatUtils.format(window.getStart(), "yyyy-MM-dd HH:mm:ss"));
+                        result.setCur_date(DateFormatUtils.format(window.getStart(), "yyyy-MM-dd"));
+                        result.setEdt(DateFormatUtils.format(window.getEnd(), "yyyy-MM-dd HH:mm:ss"));
                         collector.collect(result);
                     }
                 });
