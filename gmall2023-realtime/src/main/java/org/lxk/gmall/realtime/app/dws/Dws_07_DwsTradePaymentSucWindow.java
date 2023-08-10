@@ -18,8 +18,9 @@ import org.apache.flink.streaming.api.windowing.time.Time;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 import org.lxk.gmall.realtime.app.BaseApp;
-import org.lxk.gmall.realtime.bean.CartAddUuBean;
 import org.lxk.gmall.realtime.bean.TradePaymentBean;
+import org.lxk.gmall.realtime.function.DorisMapFunction;
+import org.lxk.gmall.realtime.util.DorisUtil;
 
 import java.time.Duration;
 
@@ -38,12 +39,19 @@ public class Dws_07_DwsTradePaymentSucWindow extends BaseApp {
         SingleOutputStreamOperator<TradePaymentBean> parsedDataSteam = parseRawDateStream(stream);
 
         // 2 开窗聚合
-        aggDataSteam(parsedDataSteam);
+        SingleOutputStreamOperator<TradePaymentBean> aggedDataStream = aggDataSteam(parsedDataSteam);
         // 3 写入doris
+        saveDataToDoris(aggedDataStream);
     }
 
-    private void aggDataSteam(SingleOutputStreamOperator<TradePaymentBean> parsedDataSteam) {
-        parsedDataSteam
+    private void saveDataToDoris(SingleOutputStreamOperator<TradePaymentBean> aggedDataStream) {
+        aggedDataStream
+                .map(new DorisMapFunction<>())
+                .sinkTo(DorisUtil.getDorisSink("gmall2023.dws_trade_payment_success_uu_window"));
+    }
+
+    private SingleOutputStreamOperator<TradePaymentBean> aggDataSteam(SingleOutputStreamOperator<TradePaymentBean> parsedDataSteam) {
+    return    parsedDataSteam
                 .assignTimestampsAndWatermarks(
                         WatermarkStrategy
                                 .<TradePaymentBean>forBoundedOutOfOrderness(Duration.ofSeconds(3))
@@ -96,6 +104,7 @@ public class Dws_07_DwsTradePaymentSucWindow extends BaseApp {
                                 bean.setPaymentSucNewUserCount(1L);
                             }
                             isTodayState.update(today);
+                            collector.collect(bean);
                         }
                     }
                 });
