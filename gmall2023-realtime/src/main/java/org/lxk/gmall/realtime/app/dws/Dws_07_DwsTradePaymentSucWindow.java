@@ -15,8 +15,10 @@ import org.apache.flink.streaming.api.functions.aggregation.AggregationFunction;
 import org.apache.flink.streaming.api.functions.windowing.AllWindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
 import org.apache.flink.util.Collector;
 import org.lxk.gmall.realtime.app.BaseApp;
+import org.lxk.gmall.realtime.bean.CartAddUuBean;
 import org.lxk.gmall.realtime.bean.TradePaymentBean;
 
 import java.time.Duration;
@@ -52,12 +54,21 @@ public class Dws_07_DwsTradePaymentSucWindow extends BaseApp {
                 .reduce(new AggregationFunction<TradePaymentBean>() {
                     @Override
                     public TradePaymentBean reduce(TradePaymentBean v1, TradePaymentBean v2) throws Exception {
-                        v1.setPaymentSucUniqueUserCount(v1.getPaymentSucUniqueUserCount()+v2.getPaymentSucUniqueUserCount());
-                        v1.setPaymentSucNewUserCount(v1.getPaymentSucNewUserCount()+v2.getPaymentSucNewUserCount());
+                        v1.setPaymentSucUniqueUserCount(v1.getPaymentSucUniqueUserCount() + v2.getPaymentSucUniqueUserCount());
+                        v1.setPaymentSucNewUserCount(v1.getPaymentSucNewUserCount() + v2.getPaymentSucNewUserCount());
                         return v1;
 
                     }
-                } );
+                }, new AllWindowFunction<TradePaymentBean, TradePaymentBean, TimeWindow>() {
+                    @Override
+                    public void apply(TimeWindow window, Iterable<TradePaymentBean> iterable, Collector<TradePaymentBean> collector) throws Exception {
+                        TradePaymentBean next = iterable.iterator().next();
+                        next.setStt(DateFormatUtils.format(window.getStart(), "yyyy-MM-dd HH:mm:ss"));
+                        next.setEdt(DateFormatUtils.format(window.getEnd(), "yyyy-MM-dd HH:mm:ss"));
+                        next.setCurDate(DateFormatUtils.format(window.getStart(), "yyyy-MM-dd"));
+                        collector.collect(next);
+                    }
+                });
     }
 
     private SingleOutputStreamOperator<TradePaymentBean> parseRawDateStream(DataStreamSource<String> stream) {
