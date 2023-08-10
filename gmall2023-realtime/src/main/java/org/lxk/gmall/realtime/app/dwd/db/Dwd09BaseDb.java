@@ -50,11 +50,8 @@ public class Dwd09BaseDb extends BaseApp {
        // tpStream = creatHbashTable(tpStream);
         // 4 tpstream and dataStream connect
         SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> dimDataAndTpStream = connect(etledStream, tpStream);
-        //dimDataAndTpStream.print();
-        //dimDataAndTpStream.print();
         // 5 filter redundant columns of data
         SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> resultStream = deleteNotNeededColumns(dimDataAndTpStream);
-        //resultStream.print();
         // 6 dataStream write down into Hbase
         writeToKafka(resultStream);
 
@@ -110,8 +107,6 @@ public class Dwd09BaseDb extends BaseApp {
                         // 3.4 关闭连接
                         JDBCUtil.closeConnection(jdbcConnection);
 
-                        //System.out.println("map:::::"+map);
-
                     }
 
 
@@ -124,11 +119,9 @@ public class Dwd09BaseDb extends BaseApp {
                         TableProcess tp = broadcastState.get(key);
                         // tp为空,继续在tplist 预加载配置数据中查询
                         if (tp == null) {
-                            System.out.println("=========not in state");
                             tp = map.get(key);
                             if (tp != null) {
 
-                                System.out.println("=====[map中的配置] ======");
                             }
                         }
                         if (null != tp) {
