@@ -2,17 +2,22 @@ package org.lxk.gmall.realtime.util;
 
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.beanutils.BeanUtils;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.streaming.api.functions.sink.SinkFunction;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.lxk.gmall.realtime.bean.TableProcess;
+import org.lxk.gmall.realtime.bean.TradeSkuOrderBean;
 import org.lxk.gmall.realtime.function.HbaseSink;
 
 import java.io.IOException;
+import java.util.List;
 
 /**
  * @Author:LB
@@ -50,7 +55,7 @@ public class HbaseUtil {
                 ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(columnFamily)).build();
                 TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(familyDescriptor).build();
                 admin.createTable(tableDescriptor);
-                log.info("=====create table "+tablename+" in Hbase=====");
+                log.info("=====create table " + tablename + " in Hbase=====");
 
             }
 
@@ -60,12 +65,12 @@ public class HbaseUtil {
     }
 
     public static void deleteTable(Connection connection, String nameSpace, String table) {
-        TableName tableName = TableName.valueOf(nameSpace,table);
+        TableName tableName = TableName.valueOf(nameSpace, table);
         try (Admin admin = connection.getAdmin()) {
             if (admin.tableExists(tableName)) {
                 admin.disableTable(tableName);
                 admin.deleteTable(tableName);
-                log.info("=====delete table "+table+" in Hbase=====");
+                log.info("=====delete table " + table + " in Hbase=====");
 
             }
 
@@ -82,9 +87,9 @@ public class HbaseUtil {
 
 
     public static void putOneRow(Connection connection, String nameSpace, String sinkTable, String sinkFamily, String[] sinkColumns, String rowKey, JSONObject data) {
-        TableName tableName = TableName.valueOf(nameSpace,sinkTable);
+        TableName tableName = TableName.valueOf(nameSpace, sinkTable);
 
-        try (Table table = connection.getTable(tableName)){
+        try (Table table = connection.getTable(tableName)) {
             Put put = new Put(Bytes.toBytes(rowKey));
             for (String sinkColumn : sinkColumns) {
                 String cell = data.getString(sinkColumn);
@@ -103,12 +108,36 @@ public class HbaseUtil {
 
     public static void deleteOneRow(Connection connection, String nameSpace, String sinkTable, String rowKey) {
         TableName tableName = TableName.valueOf(nameSpace, sinkTable);
-        try (Table table=connection.getTable(tableName)){
+        try (Table table = connection.getTable(tableName)) {
             Delete delete = new Delete(Bytes.toBytes(rowKey));
             table.delete(delete);
 
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static <T> T getRow(Connection connection, String nameSpace, String rowKey, String hbaseTableName, Class<T> tClass) {
+        TableName tableName = TableName.valueOf(nameSpace, hbaseTableName);
+       // System.out.println(tableName);
+        try (Table table = connection.getTable(tableName)) {
+            //System.out.printf("====================================="+rowKey);
+            Get get = new Get(Bytes.toBytes(rowKey));
+            Result result = table.get(get);
+            List<Cell> cells = result.listCells();
+            T t = tClass.newInstance();
+
+            for (Cell cell : cells) {
+                String columnName = Bytes.toString(CellUtil.cloneQualifier(cell));
+                String value = Bytes.toString(CellUtil.cloneValue(cell));
+                BeanUtils.setProperty(t, columnName, value);
+
+            }
+            return t;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+
     }
 }

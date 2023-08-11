@@ -48,7 +48,7 @@ public class KafkaUtil {
                         return TypeInformation.of(new TypeHint<String>(){});
                     }
                 })
-                .setStartingOffsets(OffsetsInitializer.earliest())
+                .setStartingOffsets(OffsetsInitializer.latest())
                 .build();
         return source;
     }
