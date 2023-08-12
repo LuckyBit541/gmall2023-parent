@@ -44,7 +44,7 @@ public class AsyncRichDimFunction<T> extends RichAsyncFunction<T,T> {
 
     @Override
     public void asyncInvoke(T t, ResultFuture<T> resultFuture) throws Exception {
-        CompletableFuture.supplyAsync();
+        CompletableFuture.supplyAsync(null);
 
     }
 }
