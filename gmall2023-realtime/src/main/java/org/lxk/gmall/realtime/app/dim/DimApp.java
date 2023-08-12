@@ -62,6 +62,7 @@ public class DimApp extends BaseApp {
     }
 
     private void writeToHbase(SingleOutputStreamOperator<Tuple2<JSONObject, TableProcess>> resultStream) {
+
         resultStream.addSink(HbaseUtil.getHbaseSink());
     }
 

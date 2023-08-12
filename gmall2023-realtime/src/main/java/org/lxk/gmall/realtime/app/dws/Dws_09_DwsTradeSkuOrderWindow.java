@@ -57,6 +57,7 @@ return    beanSteam
             .map(new addDimsFunction<TradeSkuOrderBean>(){
                 @Override
                 public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
+                    //System.out.printf("::::::::::::::::::::::::::::::::::::::::"+bean+"==="+dimRow);
                     bean.setSkuName(dimRow.getString("sku_name"));
                     bean.setSpuId(dimRow.getString("spu_id"));
                     bean.setCategory3Id(dimRow.getString("category3_id"));
@@ -76,7 +77,7 @@ return    beanSteam
             .map(new addDimsFunction<TradeSkuOrderBean>(){
                 @Override
                 public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
-                    bean.setSpuName(dimRow.getString("spu_naem"));
+                    bean.setSpuName(dimRow.getString("spu_name"));
                 }
 
                 @Override

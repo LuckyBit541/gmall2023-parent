@@ -140,4 +140,8 @@ public class HbaseUtil {
         }
 
     }
+//todo
+    public static AsyncConnection getAsyncConnection() {
+        return null;
+    }
 }

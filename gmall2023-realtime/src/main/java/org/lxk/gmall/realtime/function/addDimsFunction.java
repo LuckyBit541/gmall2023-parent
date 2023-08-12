@@ -15,6 +15,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.codehaus.jackson.map.util.BeanUtil;
 import org.lxk.gmall.realtime.bean.TradeSkuOrderBean;
 import org.lxk.gmall.realtime.util.HbaseUtil;
+import org.lxk.gmall.realtime.util.RedisUtil;
+import redis.clients.jedis.Jedis;
 
 import java.util.List;
 
@@ -22,31 +24,41 @@ public abstract class addDimsFunction<T> extends RichMapFunction<T,T> implements
 
 
     private Connection connection;
+    private Jedis jedisclient;
+    private JSONObject dimRow;
 
     @Override
     public void open(Configuration parameters) throws Exception {
         connection = HbaseUtil.getConnection();
+        jedisclient = RedisUtil.getJedisclient(RedisUtil.jedisPool);
 
     }
 
     @Override
     public void close() throws Exception {
         HbaseUtil.closeConnection(connection);
+        RedisUtil.closeJedisClint(jedisclient);
     }
 
 
     @Override
     public T map(T bean) throws Exception {
-        JSONObject dimRow = HbaseUtil.<JSONObject>getRow(connection,
+
+        // get dimRow in redis first
+         dimRow = RedisUtil.getDimRow(jedisclient, getTableStr(), getRowKey(bean), JSONObject.class);
+        if (dimRow == null) {
+        dimRow = HbaseUtil.<JSONObject>getRow(connection,
                 "gmall",
                 getRowKey(bean),
                 getTableStr(),
                 JSONObject.class);
 
-        addDim(bean,dimRow);
+        RedisUtil.WriteRow(jedisclient,getTableStr(),getRowKey(bean),dimRow);
+        }
+        addDim(bean, dimRow);
         return bean;
-
     }
+
 
 
 
