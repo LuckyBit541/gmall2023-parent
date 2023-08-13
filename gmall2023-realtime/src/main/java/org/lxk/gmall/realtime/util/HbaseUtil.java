@@ -13,11 +13,12 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.lxk.gmall.realtime.bean.TableProcess;
-import org.lxk.gmall.realtime.bean.TradeSkuOrderBean;
 import org.lxk.gmall.realtime.function.HbaseSink;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 /**
  * @Author:LB
@@ -119,7 +120,7 @@ public class HbaseUtil {
 
     public static <T> T getRow(Connection connection, String nameSpace, String rowKey, String hbaseTableName, Class<T> tClass) {
         TableName tableName = TableName.valueOf(nameSpace, hbaseTableName);
-       // System.out.println(tableName);
+        // System.out.println(tableName);
         try (Table table = connection.getTable(tableName)) {
             //System.out.printf("====================================="+rowKey);
             Get get = new Get(Bytes.toBytes(rowKey));
@@ -140,8 +141,52 @@ public class HbaseUtil {
         }
 
     }
-//todo
-    public static AsyncConnection getAsyncConnection() {
+
+    public static AsyncConnection getAsyncHbaseConnection() {
+        Configuration hbaseconfig = HBaseConfiguration.create();
+        hbaseconfig.set("hbase.zookeeper.quorum", "hadoop162");
+        hbaseconfig.set("hbase.zookeeper.property.clientPort", "2181");
+
+        AsyncConnection asyncConnection;
+        try {
+            asyncConnection = ConnectionFactory.createAsyncConnection(hbaseconfig).get();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return asyncConnection;
+    }
+
+    public static void closeAsyncConnection(AsyncConnection hbaseAsyncConnection) {
+        try {
+            hbaseAsyncConnection.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public static <T> T getAsyncDimRow(AsyncConnection hbaseAsyncConnection,String nameSpace,String tableStr, String rowKey, Class<T> tClass) {
+        TableName tableName = TableName.valueOf(nameSpace, tableStr);
+        AsyncTable<AdvancedScanResultConsumer> table = hbaseAsyncConnection.getTable(tableName);
+        Get get = new Get(Bytes.toBytes(rowKey));
+        CompletableFuture<Result> resultCompletableFuture = table.get(get);
+        try {
+            Result result = resultCompletableFuture.get();
+            List<Cell> cells = result.listCells();
+            T tBean = tClass.newInstance();
+            for (Cell cell : cells) {
+                String key = Bytes.toString(CellUtil.cloneQualifier(cell));
+                String value = Bytes.toString(CellUtil.cloneValue(cell));
+                BeanUtils.setProperty(tBean,key,value);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+
+
         return null;
     }
 }

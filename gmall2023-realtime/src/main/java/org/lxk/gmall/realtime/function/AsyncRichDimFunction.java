@@ -1,6 +1,6 @@
 package org.lxk.gmall.realtime.function;
 
-import com.sun.xml.internal.ws.util.CompletedFuture;
+import com.alibaba.fastjson.JSONObject;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
 import org.apache.flink.configuration.Configuration;
@@ -10,12 +10,16 @@ import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.lxk.gmall.realtime.util.HbaseUtil;
 import org.lxk.gmall.realtime.util.RedisUtil;
 
+import java.util.Collections;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
-public class AsyncRichDimFunction<T> extends RichAsyncFunction<T,T> {
+public abstract class AsyncRichDimFunction<T> extends RichAsyncFunction<T,T> implements DimFunction<T> {
 
-    private StatefulRedisConnection<String, String> connect;
-    private AsyncConnection asyncConnection;
+    private StatefulRedisConnection<String, String> redisConnect;
+    private AsyncConnection hbaseAsyncConnection;
     private RedisClient redisClient;
 
     //https://lettuce.io/docs/getting-started.html
@@ -23,28 +27,53 @@ public class AsyncRichDimFunction<T> extends RichAsyncFunction<T,T> {
     public void open(Configuration parameters) throws Exception {
         // get redis async connection
         redisClient = RedisUtil.getAsyncClient();
-        connect = redisClient.connect();
+        redisConnect = redisClient.connect();
         // get hbase connection
-        asyncConnection = HbaseUtil.getAsyncConnection();
+        hbaseAsyncConnection = HbaseUtil.getAsyncHbaseConnection();
 
     }
     @Override
     public void close() throws Exception {
-        if (connect != null) {
-            connect.close();
+        if (redisConnect != null) {
+            redisConnect.close();
         }
         if (redisClient != null) {
             redisClient.shutdown();
         }
 
-        if (asyncConnection != null) {
-            asyncConnection.close();
-        }
+        HbaseUtil.closeAsyncConnection(hbaseAsyncConnection);
     }
 
     @Override
-    public void asyncInvoke(T t, ResultFuture<T> resultFuture) throws Exception {
-        CompletableFuture.supplyAsync(null);
+    public void asyncInvoke(T bean, ResultFuture<T> resultFuture) throws Exception {
+        CompletableFuture
+                .supplyAsync(new Supplier<JSONObject>() {
+                    @Override
+                    public JSONObject get() {
+                       JSONObject dimRow= RedisUtil.getAsyncDimRow(redisConnect,getTableStr(),getRowKey(bean),JSONObject.class);
+                       return dimRow;
+                    }
+                })
+                .thenApplyAsync(new Function<JSONObject, JSONObject>() {
+                    @Override
+                    public JSONObject apply(JSONObject dimRow) {
+                        if (dimRow == null) {
+                            dimRow=HbaseUtil.getAsyncDimRow(hbaseAsyncConnection,"gmall",getTableStr(),getRowKey(bean),JSONObject.class);
+                        }
+                        return dimRow;
+                    }
+                })
+                .thenAccept(new Consumer<JSONObject>() {
+                    @Override
+                    public void accept(JSONObject dimRow) {
+                       addDim(bean,dimRow);
+                       resultFuture.complete(Collections.singleton(bean));
+                    }
+                });
+
+
 
     }
+
+
 }
