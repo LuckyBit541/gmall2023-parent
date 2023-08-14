@@ -8,13 +8,10 @@ import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisFuture;
 import io.lettuce.core.api.StatefulRedisConnection;
 import io.lettuce.core.api.async.RedisAsyncCommands;
-import io.lettuce.core.resource.ClientResources;
 import org.lxk.gmall.realtime.common.GmallConstant;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
-
-import java.util.concurrent.ExecutionException;
 
 public class RedisUtil {
 
@@ -84,5 +81,14 @@ public class RedisUtil {
 
         return null;
 
+    }
+
+    public static StatefulRedisConnection<String, String> getRedisAsyncClient(RedisClient redisClient) {
+       return  redisClient.connect();
+    }
+
+    public static void asyncWriteRow(StatefulRedisConnection<String, String> redisConnect, String tableStr, String rowKey, JSONObject dimRow) {
+        RedisAsyncCommands<String, String> commands = redisConnect.async();
+        commands.setex(getKey(tableStr,rowKey),GmallConstant.TOW_DAYS,JSON.toJSONString(dimRow));
     }
 }

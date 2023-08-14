@@ -3,6 +3,7 @@ package org.lxk.gmall.realtime.function;
 import com.alibaba.fastjson.JSONObject;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.api.StatefulRedisConnection;
+import io.lettuce.core.resource.ClientResources;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.streaming.api.functions.async.ResultFuture;
 import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
@@ -27,7 +28,8 @@ public abstract class AsyncRichDimFunction<T> extends RichAsyncFunction<T,T> imp
     public void open(Configuration parameters) throws Exception {
         // get redis async connection
         redisClient = RedisUtil.getAsyncClient();
-        redisConnect = redisClient.connect();
+         redisConnect = RedisUtil.getRedisAsyncClient(redisClient);
+//        redisConnect = redisClient.connect();
         // get hbase connection
         hbaseAsyncConnection = HbaseUtil.getAsyncHbaseConnection();
 
@@ -51,14 +53,15 @@ public abstract class AsyncRichDimFunction<T> extends RichAsyncFunction<T,T> imp
                     @Override
                     public JSONObject get() {
                        JSONObject dimRow= RedisUtil.getAsyncDimRow(redisConnect,getTableStr(),getRowKey(bean),JSONObject.class);
-                       return dimRow;
+                        return dimRow;
                     }
                 })
                 .thenApplyAsync(new Function<JSONObject, JSONObject>() {
                     @Override
                     public JSONObject apply(JSONObject dimRow) {
-                        if (dimRow == null) {
-                            dimRow=HbaseUtil.getAsyncDimRow(hbaseAsyncConnection,"gmall",getTableStr(),getRowKey(bean),JSONObject.class);
+                        if (null==dimRow) {
+                            dimRow=HbaseUtil.<JSONObject>getAsyncDimRow(hbaseAsyncConnection,"gmall",getTableStr(),getRowKey(bean),JSONObject.class);
+                            RedisUtil.asyncWriteRow(redisConnect,getTableStr(),getRowKey(bean),dimRow);
                         }
                         return dimRow;
                     }

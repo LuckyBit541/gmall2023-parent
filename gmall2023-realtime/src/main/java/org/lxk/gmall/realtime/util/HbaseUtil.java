@@ -42,7 +42,10 @@ public class HbaseUtil {
 
     public static void closeConnection(Connection connection) {
         try {
-            connection.close();
+            if (connection != null) {
+
+                connection.close();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -143,17 +146,19 @@ public class HbaseUtil {
     }
 
     public static AsyncConnection getAsyncHbaseConnection() {
-        Configuration hbaseconfig = HBaseConfiguration.create();
-        hbaseconfig.set("hbase.zookeeper.quorum", "hadoop162");
-        hbaseconfig.set("hbase.zookeeper.property.clientPort", "2181");
+        Configuration hbaseConfig = HBaseConfiguration.create();
+        hbaseConfig.set("hbase.zookeeper.quorum", "hadoop162");
+        hbaseConfig.set("hbase.zookeeper.property.clientPort", "2181");
 
         AsyncConnection asyncConnection;
         try {
-            asyncConnection = ConnectionFactory.createAsyncConnection(hbaseconfig).get();
+            asyncConnection = ConnectionFactory.createAsyncConnection(hbaseConfig).get();
+            //System.out.println("conn:"+asyncConnection);
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
+        //System.out.println("conn:"+asyncConnection);
         return asyncConnection;
     }
 
@@ -168,10 +173,13 @@ public class HbaseUtil {
 
 
     public static <T> T getAsyncDimRow(AsyncConnection hbaseAsyncConnection,String nameSpace,String tableStr, String rowKey, Class<T> tClass) {
+
         TableName tableName = TableName.valueOf(nameSpace, tableStr);
         AsyncTable<AdvancedScanResultConsumer> table = hbaseAsyncConnection.getTable(tableName);
+
         Get get = new Get(Bytes.toBytes(rowKey));
         CompletableFuture<Result> resultCompletableFuture = table.get(get);
+
         try {
             Result result = resultCompletableFuture.get();
             List<Cell> cells = result.listCells();
@@ -181,12 +189,12 @@ public class HbaseUtil {
                 String value = Bytes.toString(CellUtil.cloneValue(cell));
                 BeanUtils.setProperty(tBean,key,value);
             }
+            return tBean;
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
 
 
-        return null;
     }
 }

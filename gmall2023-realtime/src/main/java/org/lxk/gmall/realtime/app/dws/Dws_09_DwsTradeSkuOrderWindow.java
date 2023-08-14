@@ -10,13 +10,10 @@ import org.apache.flink.api.common.state.ValueState;
 import org.apache.flink.api.common.state.ValueStateDescriptor;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.configuration.Configuration;
-import org.apache.flink.streaming.api.datastream.AsyncDataStream;
 import org.apache.flink.streaming.api.datastream.DataStreamSource;
 import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.streaming.api.functions.aggregation.AggregationFunction;
-import org.apache.flink.streaming.api.functions.async.ResultFuture;
-import org.apache.flink.streaming.api.functions.async.RichAsyncFunction;
 import org.apache.flink.streaming.api.functions.windowing.ProcessWindowFunction;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.windows.TimeWindow;
@@ -24,11 +21,10 @@ import org.apache.flink.util.Collector;
 import org.lxk.gmall.realtime.app.BaseApp;
 import org.lxk.gmall.realtime.bean.TradeSkuOrderBean;
 import org.lxk.gmall.realtime.common.GmallConstant;
-import org.lxk.gmall.realtime.function.AsyncRichDimFunction;
+import org.lxk.gmall.realtime.function.addDimsFunction;
 
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 public class Dws_09_DwsTradeSkuOrderWindow extends BaseApp {
     public static void main(String[] args) {
@@ -50,39 +46,50 @@ public class Dws_09_DwsTradeSkuOrderWindow extends BaseApp {
         // 3 add dims
 
 
-        SingleOutputStreamOperator<TradeSkuOrderBean> joinedDataSteam = addDim(beanSteam);
+        SingleOutputStreamOperator<TradeSkuOrderBean> joinedDataSteam = addOrderDetailDim(beanSteam);
         joinedDataSteam.print();
 
 
     }
 
-    private SingleOutputStreamOperator<TradeSkuOrderBean> addDim(SingleOutputStreamOperator<TradeSkuOrderBean> beanSteam) {
-        SingleOutputStreamOperator<TradeSkuOrderBean> spuNameBean = AsyncDataStream
-                .unorderedWait(
-                        beanSteam,
-                        new AsyncRichDimFunction<TradeSkuOrderBean>() {
-                            @Override
-                            public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
-                                bean.setSpuName(dimRow.getString("spu_name"));
-                            }
+    private SingleOutputStreamOperator<TradeSkuOrderBean> addOrderDetailDim(SingleOutputStreamOperator<TradeSkuOrderBean> beanSteam) {
+        return beanSteam
+                .map(new addDimsFunction<TradeSkuOrderBean>() {
+                    @Override
+                    public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
+                        bean.setSkuName(dimRow.getString("sku_name"));
+                        bean.setSpuId(dimRow.getString("spu_id"));
+                        bean.setCategory3Id(dimRow.getString("category3_id"));
+                        bean.setTrademarkId(dimRow.getString("tm_id"));
+                    }
 
-                            @Override
-                            public String getRowKey(TradeSkuOrderBean bean) {
-                                return bean.getSpuId();
-                            }
+                    @Override
+                    public String getRowKey(TradeSkuOrderBean bean) {
+                        return bean.getSkuId();
+                    }
 
-                            @Override
-                            public String getTableStr() {
-                                return "dim_spu_info";
-                            }
-                        },
-                        120,
-                        TimeUnit.SECONDS
-                );
-        // add tm_name
-        SingleOutputStreamOperator<TradeSkuOrderBean> tmNmaeBean = AsyncDataStream.unorderedWait(
-                spuNameBean,
-                new AsyncRichDimFunction<TradeSkuOrderBean>() {
+                    @Override
+                    public String getTableStr() {
+                        return "dim_sku_info";
+                    }
+                })
+                .map(new addDimsFunction<TradeSkuOrderBean>() {
+                    @Override
+                    public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
+                        bean.setSpuName(dimRow.getString("spu_name"));
+                    }
+
+                    @Override
+                    public String getRowKey(TradeSkuOrderBean bean) {
+                        return bean.getSpuId();
+                    }
+
+                    @Override
+                    public String getTableStr() {
+                        return "dim_spu_info";
+                    }
+                })
+                .map(new addDimsFunction<TradeSkuOrderBean>() {
                     @Override
                     public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
                         bean.setTrademarkName(dimRow.getString("tm_name"));
@@ -98,14 +105,8 @@ public class Dws_09_DwsTradeSkuOrderWindow extends BaseApp {
                     public String getTableStr() {
                         return "dim_base_trademark";
                     }
-                },
-                120,
-                TimeUnit.SECONDS
-        );
-       // cate2
-        SingleOutputStreamOperator<TradeSkuOrderBean> withcate2Bean = AsyncDataStream.unorderedWait(
-                tmNmaeBean,
-                new AsyncRichDimFunction<TradeSkuOrderBean>() {
+                })
+                .map(new addDimsFunction<TradeSkuOrderBean>() {
                     @Override
                     public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
                         bean.setCategory3Name(dimRow.getString("name"));
@@ -122,15 +123,8 @@ public class Dws_09_DwsTradeSkuOrderWindow extends BaseApp {
                     public String getTableStr() {
                         return "dim_base_category3";
                     }
-                },
-                120,
-                TimeUnit.SECONDS
-        );
-
-        // cate1
-        SingleOutputStreamOperator<TradeSkuOrderBean> withCate1Bean = AsyncDataStream.unorderedWait(
-                withcate2Bean,
-                new AsyncRichDimFunction<TradeSkuOrderBean>() {
+                })
+                .map(new addDimsFunction<TradeSkuOrderBean>() {
                     @Override
                     public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
                         bean.setCategory2Name(dimRow.getString("name"));
@@ -146,14 +140,8 @@ public class Dws_09_DwsTradeSkuOrderWindow extends BaseApp {
                     public String getTableStr() {
                         return "dim_base_category2";
                     }
-                },
-                120,
-                TimeUnit.SECONDS
-        );
-// cate1Name
-        SingleOutputStreamOperator<TradeSkuOrderBean> fullDimBean = AsyncDataStream.unorderedWait(
-                withCate1Bean,
-                new AsyncRichDimFunction<TradeSkuOrderBean>() {
+                })
+                .map(new addDimsFunction<TradeSkuOrderBean>() {
                     @Override
                     public void addDim(TradeSkuOrderBean bean, JSONObject dimRow) {
                         bean.setCategory1Name(dimRow.getString("name"));
@@ -168,11 +156,7 @@ public class Dws_09_DwsTradeSkuOrderWindow extends BaseApp {
                     public String getTableStr() {
                         return "dim_base_category1";
                     }
-                },
-                120,
-                TimeUnit.SECONDS
-        );
-          return fullDimBean;
+                });
 
     }
 
