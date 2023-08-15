@@ -28,8 +28,8 @@ public abstract class AsyncRichDimFunction<T> extends RichAsyncFunction<T,T> imp
     public void open(Configuration parameters) throws Exception {
         // get redis async connection
         redisClient = RedisUtil.getAsyncClient();
-         redisConnect = RedisUtil.getRedisAsyncClient(redisClient);
-//        redisConnect = redisClient.connect();
+        // redisConnect = RedisUtil.getRedisAsyncClient(redisClient);
+      redisConnect = redisClient.connect();
         // get hbase connection
         hbaseAsyncConnection = HbaseUtil.getAsyncHbaseConnection();
 

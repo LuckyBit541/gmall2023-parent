@@ -164,7 +164,9 @@ public class HbaseUtil {
 
     public static void closeAsyncConnection(AsyncConnection hbaseAsyncConnection) {
         try {
-            hbaseAsyncConnection.close();
+            if (hbaseAsyncConnection != null) {
+                hbaseAsyncConnection.close();
+            }
         } catch (IOException e) {
             e.printStackTrace();
             throw new RuntimeException(e);
